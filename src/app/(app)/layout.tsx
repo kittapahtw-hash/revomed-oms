@@ -1,14 +1,11 @@
 import { redirect } from "next/navigation";
-import { destroySession, getSession } from "@/lib/auth";
+import { getSession } from "@/lib/auth";
 import { Shell } from "@/components/Shell";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const me = await getSession();
-  if (!me) {
-    // session ใช้ไม่ได้แล้ว (หมดอายุ / ถูก revoke / token version ไม่ตรง)
-    // ต้องลบ cookie ทิ้งด้วย ไม่งั้น middleware ยังเห็นว่า "มี cookie" แล้ววนกลับมาอีก
-    await destroySession();
-    redirect("/login");
-  }
+  // ❗ ห้ามลบ cookie ตรงนี้ — Next.js แก้ cookie ใน Server Component ไม่ได้ (prod จะ 500 ทันที)
+  //    ส่งธง stale ไปให้หน้า login ล้าง cookie ให้แทน (หน้านั้นเรียก route handler ได้)
+  if (!me) redirect("/login?stale=1");
   return <Shell me={me}>{children}</Shell>;
 }

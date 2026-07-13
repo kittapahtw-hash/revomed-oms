@@ -10,13 +10,20 @@ function LoginForm() {
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
 
-  // ล็อกอินอยู่แล้วจริงๆ (verify กับ DB) → เด้งเข้าระบบ
-  // เช็คตรงนี้แทนที่จะเช็คใน middleware — middleware ดูได้แค่ว่ามี cookie ไม่รู้ว่า valid มั้ย
+  /* เช็คสถานะ session ตรงนี้ (ไม่ใช่ที่ middleware — มันดูได้แค่ว่ามี cookie ไม่รู้ว่า valid มั้ย)
+   *  - ยัง valid  → เด้งเข้าระบบเลย
+   *  - เสียแล้ว   → ล้าง cookie ทิ้งผ่าน /api/auth/logout (route handler แก้ cookie ได้)
+   *                 ไม่งั้น middleware ยังเห็น cookie แล้วเด้งวนไม่จบ */
   useEffect(() => {
     void (async () => {
       const r = await fetch("/api/auth/me", { cache: "no-store" });
       const j = await r.json();
-      if (j.ok && j.user) router.replace(params.get("next") || "/home");
+      if (j.ok && j.user) {
+        router.replace(params.get("next") || "/home");
+      } else {
+        await fetch("/api/auth/logout", { method: "POST" });
+        if (params.get("stale")) setErr("เซสชันหมดอายุหรือถูกยกเลิก — กรุณาเข้าสู่ระบบใหม่");
+      }
     })();
   }, [router, params]);
 
